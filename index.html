@@ -6,8 +6,8 @@
     <title>Trợ lý AI Đại Ngàn - Âm Trị Liệu</title>
     
     <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -21,17 +21,36 @@
     <style>
         /* Custom Styles & Animations */
         body {
-            background-color: #1a202c; /* Đen nhạt / Xám đậm */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             overflow: hidden;
         }
 
+        /* Animated Chill Background */
+        @keyframes gradient-bg {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animated-bg {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #431407, #0f172a);
+            background-size: 400% 400%;
+            animation: gradient-bg 20s ease infinite;
+        }
+
         .bg-glass {
-            background: rgba(45, 55, 72, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .bg-glass-chat {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         /* Vinyl Spin Animation */
@@ -46,7 +65,7 @@
         }
         .bar {
             width: 4px;
-            background-color: #f6ad55; /* Orange-300 */
+            background-color: #fbd38d; /* Orange-200 */
             border-radius: 2px;
             animation: bounce 1s infinite ease-in-out;
         }
@@ -57,17 +76,26 @@
         .bar:nth-child(5) { animation-delay: 0.3s; }
         .bar-paused { animation-play-state: paused; height: 4px !important; }
 
+        /* Message pop animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
         /* Typing Dot Animation */
         @keyframes blink {
-            0% { opacity: .2; }
-            20% { opacity: 1; }
-            100% { opacity: .2; }
+            0% { opacity: .2; transform: scale(0.8); }
+            20% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: .2; transform: scale(0.8); }
         }
         .typing-dot {
             animation: blink 1.4s infinite both;
             height: 6px;
             width: 6px;
-            background: #fff;
+            background: #fbd38d;
             border-radius: 50%;
             display: inline-block;
             margin: 0 2px;
@@ -76,13 +104,33 @@
         .typing-dot:nth-child(3) { animation-delay: .4s; }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+        /* Initial Loader */
+        .loader-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(251, 146, 60, 0.3);
+            border-radius: 50%;
+            border-top-color: #fb923c;
+            animation: spin 1s ease-in-out infinite;
+        }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="animated-bg">
+    <!-- Thẻ div ẩn để Tailwind CDN biên dịch trước các màu Gradient do Gemini trả về -->
+    <div class="hidden from-amber-600 to-orange-900 from-blue-600 to-cyan-900 from-green-600 to-emerald-900 from-red-600 to-rose-900 from-purple-600 to-indigo-900"></div>
+
+    <div id="root">
+        <!-- Màn hình chờ (Loading Screen) - Sẽ hiển thị ngay lập tức và biến mất khi React tải xong -->
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-family: sans-serif;">
+            <div class="loader-spinner"></div>
+            <p style="margin-top: 16px; font-size: 14px; color: #fb923c; letter-spacing: 1px; font-weight: 500;">ĐANG KHỞI ĐỘNG TRẠM SẠC...</p>
+        </div>
+    </div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -157,14 +205,12 @@
                         
                     } catch (error) {
                         if (attempt === retries.length) {
-                            // Nếu đã hết số lần thử mà vẫn lỗi
                             return {
                                 reply: "Đại Ngàn hiện đang nghỉ ngơi một chút... Xin bạn hãy hít thở sâu, nhắm mắt lại và thử kết nối lại sau nhé. 🌿",
                                 track: "Âm thanh của sự tĩnh lặng",
                                 color: "from-gray-600 to-gray-900"
                             };
                         }
-                        // Chờ trước khi thử lại
                         await new Promise(resolve => setTimeout(resolve, retries[attempt]));
                     }
                 }
@@ -173,21 +219,17 @@
             const handleSend = async (text) => {
                 if (!text.trim()) return;
 
-                // Add user message
                 const userMsg = { id: Date.now(), sender: 'user', text: text };
                 setMessages(prev => [...prev, userMsg]);
                 setInputText('');
                 setIsTyping(true);
 
-                // Call Gemini LLM API
                 const responseData = await callGeminiAPI(text);
 
-                // Add bot message
                 const botMsg = { id: Date.now() + 1, sender: 'bot', text: responseData.reply };
                 setMessages(prev => [...prev, botMsg]);
                 setIsTyping(false);
 
-                // Trigger Music Player with dynamically generated track
                 setCurrentTrack({
                     title: responseData.track,
                     gradient: responseData.color
@@ -200,52 +242,56 @@
             };
 
             return (
-                <div className="flex justify-center items-center h-screen w-full bg-gray-900 text-gray-100">
-                    {/* Mobile App Container */}
-                    <div className="w-full max-w-md h-full sm:h-[90vh] sm:rounded-3xl sm:border border-gray-700 bg-gray-800 shadow-2xl flex flex-col relative overflow-hidden">
+                <div className="flex justify-center items-center h-[100dvh] w-full text-gray-100 p-0 sm:p-4">
+                    {/* Premium Mobile App Container */}
+                    <div className="w-full max-w-md h-full sm:h-[90vh] sm:rounded-[2.5rem] bg-glass shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-white/10 sm:shadow-[0_0_40px_rgba(0,0,0,0.5)]">
                         
-                        {/* Background Decoration */}
-                        <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-orange-500/20 to-transparent pointer-events-none"></div>
+                        {/* Decorative Glows */}
+                        <div className="absolute -top-24 -left-24 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                        <div className="absolute top-1/2 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 bg-gray-800/90 backdrop-blur-md border-b border-gray-700 z-10">
-                            <div className="flex items-center gap-3">
-                                <div className="relative">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
-                                        <i data-lucide="leaf" className="w-5 h-5"></i>
+                        <div className="flex items-center justify-between px-6 py-5 bg-black/20 backdrop-blur-xl border-b border-white/5 z-20">
+                            <div className="flex items-center gap-4">
+                                <div className="relative group cursor-pointer">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/40 ring-2 ring-white/20 group-hover:scale-105 transition-transform">
+                                        <i data-lucide="leaf" className="w-6 h-6"></i>
                                     </div>
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-800 rounded-full"></div>
+                                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-900 rounded-full animate-pulse"></div>
                                 </div>
                                 <div>
-                                    <h1 className="font-bold text-lg leading-tight flex items-center gap-1">
-                                        AI Đại Ngàn <i data-lucide="sparkles" className="w-4 h-4 text-orange-400"></i>
+                                    <h1 className="font-bold text-lg tracking-wide flex items-center gap-1.5 text-white">
+                                        AI Đại Ngàn <i data-lucide="sparkles" className="w-4 h-4 text-amber-400"></i>
                                     </h1>
-                                    <p className="text-xs text-orange-400 font-medium">Trạm sạc cảm xúc (Powered by Gemini)</p>
+                                    <p className="text-[11px] text-amber-200/80 font-medium tracking-wider uppercase">Trạm sạc cảm xúc</p>
                                 </div>
                             </div>
-                            <button className="text-gray-400 hover:text-white transition">
-                                <i data-lucide="more-vertical" className="w-5 h-5"></i>
+                            <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                                <i data-lucide="more-horizontal" className="w-5 h-5 text-gray-300"></i>
                             </button>
                         </div>
 
                         {/* Chat Area */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 z-10 pb-32">
+                        <div className="flex-1 overflow-y-auto p-5 space-y-6 z-10 pb-36">
                             {/* Date Badge */}
-                            <div className="flex justify-center mb-6">
-                                <span className="text-xs font-medium bg-gray-700/50 text-gray-400 px-3 py-1 rounded-full">Hôm nay</span>
+                            <div className="flex justify-center mb-2">
+                                <span className="text-[11px] font-semibold tracking-wider uppercase bg-black/30 backdrop-blur-md text-gray-300 px-4 py-1.5 rounded-full border border-white/5 shadow-sm">
+                                    Hôm nay
+                                </span>
                             </div>
 
                             {messages.map((msg) => (
-                                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div key={msg.id} className={`flex w-full animate-fade-in-up ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     {msg.sender === 'bot' && (
-                                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 mr-2 flex items-center justify-center text-orange-400 mt-1">
-                                            <i data-lucide="sparkles" className="w-4 h-4"></i>
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex-shrink-0 mr-3 flex items-center justify-center text-amber-400 mt-auto shadow-md">
+                                            <i data-lucide="leaf" className="w-4 h-4"></i>
                                         </div>
                                     )}
-                                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                                    
+                                    <div className={`max-w-[75%] px-5 py-3.5 text-[15px] leading-relaxed shadow-xl ${
                                         msg.sender === 'user' 
-                                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-br-none' 
-                                        : 'bg-gray-700 text-gray-100 rounded-bl-none border border-gray-600 leading-relaxed'
+                                        ? 'bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-2xl rounded-br-sm shadow-orange-500/20 font-medium' 
+                                        : 'bg-glass-chat text-gray-100 rounded-2xl rounded-bl-sm font-normal'
                                     }`}>
                                         {msg.text}
                                     </div>
@@ -254,64 +300,64 @@
 
                             {/* Typing Indicator */}
                             {isTyping && (
-                                <div className="flex justify-start">
-                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 mr-2 flex items-center justify-center text-orange-400 mt-1">
-                                        <i data-lucide="sparkles" className="w-4 h-4"></i>
+                                <div className="flex justify-start animate-fade-in-up">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex-shrink-0 mr-3 flex items-center justify-center text-amber-400 mt-auto shadow-md">
+                                        <i data-lucide="leaf" className="w-4 h-4"></i>
                                     </div>
-                                    <div className="bg-gray-700 text-gray-100 rounded-2xl rounded-bl-none px-4 py-3 flex items-center">
+                                    <div className="bg-glass-chat rounded-2xl rounded-bl-sm px-5 py-4 flex items-center shadow-xl">
                                         <div className="typing-dot"></div>
                                         <div className="typing-dot"></div>
                                         <div className="typing-dot"></div>
                                     </div>
                                 </div>
                             )}
-                            <div ref={messagesEndRef} />
+                            <div ref={messagesEndRef} className="h-4" />
                         </div>
 
                         {/* Quick Replies */}
                         {messages.length === 1 && !isTyping && (
-                            <div className="px-4 pb-2 flex gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar z-10">
+                            <div className="absolute bottom-20 left-0 w-full px-5 pb-4 flex gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar z-10">
                                 {quickReplies.map((reply, idx) => (
                                     <button 
                                         key={idx}
                                         onClick={() => handleSend(reply)}
-                                        className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-4 py-2 rounded-full border border-gray-600 transition shadow-sm flex-shrink-0 flex items-center gap-1"
+                                        className="bg-black/40 hover:bg-black/60 backdrop-blur-xl text-gray-200 text-sm px-5 py-2.5 rounded-full border border-white/10 transition-all shadow-lg flex-shrink-0 flex items-center gap-2"
                                     >
-                                        <i data-lucide="sparkles" className="w-3 h-3 text-orange-400"></i> {reply}
+                                        <i data-lucide="sparkles" className="w-3.5 h-3.5 text-amber-400"></i> {reply}
                                     </button>
                                 ))}
                             </div>
                         )}
 
-                        {/* Music Player Widget */}
+                        {/* Music Player Widget (Premium Glassmorphism) */}
                         {currentTrack && (
-                            <div className="absolute bottom-20 left-4 right-4 z-20 transition-all duration-500 transform translate-y-0 opacity-100">
-                                <div className="bg-glass rounded-2xl p-3 flex items-center shadow-lg shadow-black/50">
+                            <div className="absolute bottom-24 left-5 right-5 z-30 transition-all duration-500 transform translate-y-0 opacity-100">
+                                <div className="bg-black/50 backdrop-blur-2xl rounded-3xl p-3.5 flex items-center border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
                                     {/* Vinyl Record */}
-                                    <div className={`relative w-12 h-12 rounded-full bg-gradient-to-tr ${currentTrack.gradient} flex items-center justify-center shadow-inner flex-shrink-0 ${isPlaying ? 'animate-spin-slow' : 'animate-spin-slow paused'}`}>
-                                        <div className="w-3 h-3 bg-gray-800 rounded-full z-10 border border-gray-900"></div>
+                                    <div className={`relative w-14 h-14 rounded-full bg-gradient-to-tr ${currentTrack.gradient} flex items-center justify-center shadow-inner flex-shrink-0 ring-1 ring-white/20 ${isPlaying ? 'animate-spin-slow' : 'animate-spin-slow paused'}`}>
+                                        <div className="w-3.5 h-3.5 bg-slate-900 rounded-full z-10 border border-slate-800 shadow-sm"></div>
                                         {/* Vinyl grooves */}
-                                        <div className="absolute inset-1 rounded-full border border-black/20"></div>
-                                        <div className="absolute inset-2 rounded-full border border-black/20"></div>
+                                        <div className="absolute inset-[3px] rounded-full border border-black/30"></div>
+                                        <div className="absolute inset-[7px] rounded-full border border-black/20"></div>
                                     </div>
                                     
-                                    <div className="ml-3 flex-1">
-                                        <p className="text-xs text-orange-400 font-semibold mb-0.5 flex items-center gap-1">
-                                            Đang phát (AI Khởi tạo) ✨
+                                    <div className="ml-4 flex-1 overflow-hidden">
+                                        <p className="text-[10px] text-amber-400/90 font-bold tracking-widest uppercase mb-1 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                            AI Khởi tạo
                                         </p>
-                                        <p className="text-sm font-bold text-white truncate w-40">{currentTrack.title}</p>
+                                        <p className="text-[15px] font-bold text-white truncate w-full">{currentTrack.title}</p>
                                     </div>
 
                                     {/* Audio Visualizer */}
-                                    <div className="flex items-end gap-1 mr-4 h-6">
-                                        <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
+                                    <div className="flex items-end gap-[3px] mr-5 h-5 opacity-80">
                                         <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
                                         <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
                                         <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
                                         <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
                                     </div>
 
-                                    <button onClick={togglePlay} className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition flex-shrink-0 border border-white/20">
+                                    <button onClick={togglePlay} className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all flex-shrink-0 border border-white/10 backdrop-blur-sm">
                                         {isPlaying ? (
                                             <i data-lucide="pause" className="w-5 h-5 fill-current"></i>
                                         ) : (
@@ -323,28 +369,28 @@
                         )}
 
                         {/* Input Area */}
-                        <div className="p-4 bg-gray-800 border-t border-gray-700 z-10 relative">
+                        <div className="p-4 bg-black/30 backdrop-blur-2xl border-t border-white/10 z-20 relative">
                             <form 
                                 onSubmit={(e) => { e.preventDefault(); handleSend(inputText); }}
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-3 bg-black/40 p-1.5 rounded-full border border-white/10 focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/50 transition-all"
                             >
                                 <input 
                                     type="text" 
                                     value={inputText}
                                     onChange={(e) => setInputText(e.target.value)}
-                                    placeholder="Chia sẻ để AI tạo nhạc ✨..." 
-                                    className="flex-1 bg-gray-900 text-white text-sm rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 border border-gray-700 placeholder-gray-500"
+                                    placeholder="Bạn đang nghĩ gì? ✨" 
+                                    className="flex-1 bg-transparent text-white text-[15px] px-4 py-2.5 focus:outline-none placeholder-gray-400 font-medium"
                                 />
                                 <button 
                                     type="submit"
                                     disabled={!inputText.trim() || isTyping}
-                                    className={`w-11 h-11 rounded-full flex items-center justify-center transition flex-shrink-0 ${
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
                                         inputText.trim() && !isTyping 
-                                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/30' 
-                                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:scale-105 shadow-lg shadow-orange-500/40' 
+                                        : 'bg-white/5 text-gray-500 cursor-not-allowed'
                                     }`}
                                 >
-                                    <i data-lucide="sparkles" className="w-5 h-5 ml-0.5"></i>
+                                    <i data-lucide="send" className="w-4 h-4 ml-0.5"></i>
                                 </button>
                             </form>
                         </div>
