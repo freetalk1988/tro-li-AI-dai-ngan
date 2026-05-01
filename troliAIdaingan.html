@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trợ lý AI Đại Ngàn - Âm Trị Liệu</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Custom Styles & Animations */
+        body {
+            background-color: #1a202c; /* Đen nhạt / Xám đậm */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .bg-glass {
+            background: rgba(45, 55, 72, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Vinyl Spin Animation */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin 4s linear infinite; }
+        .paused { animation-play-state: paused; }
+
+        /* Audio Visualizer Bars Animation */
+        @keyframes bounce {
+            0%, 100% { height: 4px; }
+            50% { height: 16px; }
+        }
+        .bar {
+            width: 4px;
+            background-color: #f6ad55; /* Orange-300 */
+            border-radius: 2px;
+            animation: bounce 1s infinite ease-in-out;
+        }
+        .bar:nth-child(1) { animation-delay: 0s; }
+        .bar:nth-child(2) { animation-delay: 0.2s; }
+        .bar:nth-child(3) { animation-delay: 0.4s; }
+        .bar:nth-child(4) { animation-delay: 0.1s; }
+        .bar:nth-child(5) { animation-delay: 0.3s; }
+        .bar-paused { animation-play-state: paused; height: 4px !important; }
+
+        /* Typing Dot Animation */
+        @keyframes blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
+        }
+        .typing-dot {
+            animation: blink 1.4s infinite both;
+            height: 6px;
+            width: 6px;
+            background: #fff;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+        }
+        .typing-dot:nth-child(2) { animation-delay: .2s; }
+        .typing-dot:nth-child(3) { animation-delay: .4s; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // API Key do môi trường cung cấp
+        const apiKey = "AIzaSyDiFd6m_pk644nrz4nUFHZUkKbhjBUxBkk"; 
+
+        const quickReplies = [
+            "Tớ đang rất áp lực 😞",
+            "Tớ lo cho bài thi ngày mai...",
+            "Hôm nay tớ thấy buồn."
+        ];
+
+        function App() {
+            const [messages, setMessages] = useState([
+                { id: 1, sender: 'bot', text: 'Chào bạn, tớ là Trợ lý AI Đại Ngàn ✨. Hôm nay bạn cảm thấy thế nào? Hãy kể tớ nghe nhé...' }
+            ]);
+            const [inputText, setInputText] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            
+            // Player States
+            const [currentTrack, setCurrentTrack] = useState(null);
+            const [isPlaying, setIsPlaying] = useState(false);
+
+            const messagesEndRef = useRef(null);
+
+            // Auto-scroll to bottom
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages, isTyping]);
+
+            // Hàm gọi Gemini API với cơ chế Retry (Exponential Backoff)
+            const callGeminiAPI = async (userMessage) => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                const systemInstruction = `Bạn là 'Trợ lý AI Đại Ngàn', một chuyên gia tâm lý học đường kiêm người am hiểu âm nhạc truyền thống Tây Nguyên (Đàn Đá, T'rưng, Cồng chiêng). 
+                Nhiệm vụ của bạn là: 
+                1. Phân tích cảm xúc hiện tại của người dùng dựa trên tin nhắn của họ.
+                2. Đưa ra một lời phản hồi động viên, xoa dịu ngắn gọn (tối đa 40 từ), ngôn từ êm ái, mang tính chất chữa lành.
+                3. Đề xuất một bản nhạc ảo kết hợp giữa nhạc cụ dân tộc và beat Lofi phù hợp nhất với cảm xúc đó.
+                
+                Phản hồi BẮT BUỘC bằng định dạng JSON với cấu trúc chính xác như sau:
+                {
+                    "reply": "Lời động viên và hướng dẫn thư giãn...",
+                    "track": "Tên bản nhạc kết hợp (VD: Lofi T'rưng - Suối Ngàn Thanh Lọc)",
+                    "color": "Chọn 1 trong các Tailwind gradient sau tùy theo mức độ năng lượng: 'from-amber-600 to-orange-900' (ấm áp), 'from-blue-600 to-cyan-900' (tĩnh lặng), 'from-green-600 to-emerald-900' (chữa lành tự nhiên), 'from-red-600 to-rose-900' (mạnh mẽ/vỗ về), 'from-purple-600 to-indigo-900' (mơ màng)"
+                }`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userMessage }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    generationConfig: {
+                        responseMimeType: "application/json"
+                    }
+                };
+
+                const retries = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff delays
+                
+                for (let attempt = 0; attempt <= retries.length; attempt++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (!response.ok) throw new Error('Lỗi kết nối API');
+                        
+                        const data = await response.json();
+                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                        return JSON.parse(text); // Trả về object JSON
+                        
+                    } catch (error) {
+                        if (attempt === retries.length) {
+                            // Nếu đã hết số lần thử mà vẫn lỗi
+                            return {
+                                reply: "Đại Ngàn hiện đang nghỉ ngơi một chút... Xin bạn hãy hít thở sâu, nhắm mắt lại và thử kết nối lại sau nhé. 🌿",
+                                track: "Âm thanh của sự tĩnh lặng",
+                                color: "from-gray-600 to-gray-900"
+                            };
+                        }
+                        // Chờ trước khi thử lại
+                        await new Promise(resolve => setTimeout(resolve, retries[attempt]));
+                    }
+                }
+            };
+
+            const handleSend = async (text) => {
+                if (!text.trim()) return;
+
+                // Add user message
+                const userMsg = { id: Date.now(), sender: 'user', text: text };
+                setMessages(prev => [...prev, userMsg]);
+                setInputText('');
+                setIsTyping(true);
+
+                // Call Gemini LLM API
+                const responseData = await callGeminiAPI(text);
+
+                // Add bot message
+                const botMsg = { id: Date.now() + 1, sender: 'bot', text: responseData.reply };
+                setMessages(prev => [...prev, botMsg]);
+                setIsTyping(false);
+
+                // Trigger Music Player with dynamically generated track
+                setCurrentTrack({
+                    title: responseData.track,
+                    gradient: responseData.color
+                });
+                setIsPlaying(true);
+            };
+
+            const togglePlay = () => {
+                setIsPlaying(!isPlaying);
+            };
+
+            return (
+                <div className="flex justify-center items-center h-screen w-full bg-gray-900 text-gray-100">
+                    {/* Mobile App Container */}
+                    <div className="w-full max-w-md h-full sm:h-[90vh] sm:rounded-3xl sm:border border-gray-700 bg-gray-800 shadow-2xl flex flex-col relative overflow-hidden">
+                        
+                        {/* Background Decoration */}
+                        <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-orange-500/20 to-transparent pointer-events-none"></div>
+
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 bg-gray-800/90 backdrop-blur-md border-b border-gray-700 z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                                        <i data-lucide="leaf" className="w-5 h-5"></i>
+                                    </div>
+                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-800 rounded-full"></div>
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-lg leading-tight flex items-center gap-1">
+                                        AI Đại Ngàn <i data-lucide="sparkles" className="w-4 h-4 text-orange-400"></i>
+                                    </h1>
+                                    <p className="text-xs text-orange-400 font-medium">Trạm sạc cảm xúc (Powered by Gemini)</p>
+                                </div>
+                            </div>
+                            <button className="text-gray-400 hover:text-white transition">
+                                <i data-lucide="more-vertical" className="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        {/* Chat Area */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 z-10 pb-32">
+                            {/* Date Badge */}
+                            <div className="flex justify-center mb-6">
+                                <span className="text-xs font-medium bg-gray-700/50 text-gray-400 px-3 py-1 rounded-full">Hôm nay</span>
+                            </div>
+
+                            {messages.map((msg) => (
+                                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    {msg.sender === 'bot' && (
+                                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 mr-2 flex items-center justify-center text-orange-400 mt-1">
+                                            <i data-lucide="sparkles" className="w-4 h-4"></i>
+                                        </div>
+                                    )}
+                                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                                        msg.sender === 'user' 
+                                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-br-none' 
+                                        : 'bg-gray-700 text-gray-100 rounded-bl-none border border-gray-600 leading-relaxed'
+                                    }`}>
+                                        {msg.text}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Typing Indicator */}
+                            {isTyping && (
+                                <div className="flex justify-start">
+                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 mr-2 flex items-center justify-center text-orange-400 mt-1">
+                                        <i data-lucide="sparkles" className="w-4 h-4"></i>
+                                    </div>
+                                    <div className="bg-gray-700 text-gray-100 rounded-2xl rounded-bl-none px-4 py-3 flex items-center">
+                                        <div className="typing-dot"></div>
+                                        <div className="typing-dot"></div>
+                                        <div className="typing-dot"></div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Quick Replies */}
+                        {messages.length === 1 && !isTyping && (
+                            <div className="px-4 pb-2 flex gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar z-10">
+                                {quickReplies.map((reply, idx) => (
+                                    <button 
+                                        key={idx}
+                                        onClick={() => handleSend(reply)}
+                                        className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-4 py-2 rounded-full border border-gray-600 transition shadow-sm flex-shrink-0 flex items-center gap-1"
+                                    >
+                                        <i data-lucide="sparkles" className="w-3 h-3 text-orange-400"></i> {reply}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Music Player Widget */}
+                        {currentTrack && (
+                            <div className="absolute bottom-20 left-4 right-4 z-20 transition-all duration-500 transform translate-y-0 opacity-100">
+                                <div className="bg-glass rounded-2xl p-3 flex items-center shadow-lg shadow-black/50">
+                                    {/* Vinyl Record */}
+                                    <div className={`relative w-12 h-12 rounded-full bg-gradient-to-tr ${currentTrack.gradient} flex items-center justify-center shadow-inner flex-shrink-0 ${isPlaying ? 'animate-spin-slow' : 'animate-spin-slow paused'}`}>
+                                        <div className="w-3 h-3 bg-gray-800 rounded-full z-10 border border-gray-900"></div>
+                                        {/* Vinyl grooves */}
+                                        <div className="absolute inset-1 rounded-full border border-black/20"></div>
+                                        <div className="absolute inset-2 rounded-full border border-black/20"></div>
+                                    </div>
+                                    
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-xs text-orange-400 font-semibold mb-0.5 flex items-center gap-1">
+                                            Đang phát (AI Khởi tạo) ✨
+                                        </p>
+                                        <p className="text-sm font-bold text-white truncate w-40">{currentTrack.title}</p>
+                                    </div>
+
+                                    {/* Audio Visualizer */}
+                                    <div className="flex items-end gap-1 mr-4 h-6">
+                                        <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
+                                        <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
+                                        <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
+                                        <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
+                                        <div className={`bar ${!isPlaying ? 'bar-paused' : ''}`}></div>
+                                    </div>
+
+                                    <button onClick={togglePlay} className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition flex-shrink-0 border border-white/20">
+                                        {isPlaying ? (
+                                            <i data-lucide="pause" className="w-5 h-5 fill-current"></i>
+                                        ) : (
+                                            <i data-lucide="play" className="w-5 h-5 fill-current ml-1"></i>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Input Area */}
+                        <div className="p-4 bg-gray-800 border-t border-gray-700 z-10 relative">
+                            <form 
+                                onSubmit={(e) => { e.preventDefault(); handleSend(inputText); }}
+                                className="flex items-center gap-2"
+                            >
+                                <input 
+                                    type="text" 
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    placeholder="Chia sẻ để AI tạo nhạc ✨..." 
+                                    className="flex-1 bg-gray-900 text-white text-sm rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 border border-gray-700 placeholder-gray-500"
+                                />
+                                <button 
+                                    type="submit"
+                                    disabled={!inputText.trim() || isTyping}
+                                    className={`w-11 h-11 rounded-full flex items-center justify-center transition flex-shrink-0 ${
+                                        inputText.trim() && !isTyping 
+                                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/30' 
+                                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                    }`}
+                                >
+                                    <i data-lucide="sparkles" className="w-5 h-5 ml-0.5"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        // Initialize Lucide icons after render
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 100);
+    </script>
+</body>
+</html>
