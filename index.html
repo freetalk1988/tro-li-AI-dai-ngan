@@ -135,8 +135,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // API Key do môi trường cung cấp
-        const apiKey = "AIzaSyDiFd6m_pk644nrz4nUFHZUkKbhjBUxBkk"; 
+        // Khóa API của bạn đã được cập nhật
+        const apiKey = "AIzaSyDMwvPexDv_xvOVgbUZDryQezMbcwfggLA"; 
 
         const quickReplies = [
             "Tớ đang rất áp lực 😞",
@@ -207,8 +207,8 @@
                         if (attempt === retries.length) {
                             return {
                                 reply: "Đại Ngàn hiện đang nghỉ ngơi một chút... Xin bạn hãy hít thở sâu, nhắm mắt lại và thử kết nối lại sau nhé. 🌿",
-                                track: "Âm thanh của sự tĩnh lặng",
-                                color: "from-gray-600 to-gray-900"
+                                track: null,
+                                color: null
                             };
                         }
                         await new Promise(resolve => setTimeout(resolve, retries[attempt]));
@@ -230,11 +230,18 @@
                 setMessages(prev => [...prev, botMsg]);
                 setIsTyping(false);
 
-                setCurrentTrack({
-                    title: responseData.track,
-                    gradient: responseData.color
-                });
-                setIsPlaying(true);
+                // Chỉ tạo và phát nhạc nếu API trả về tên track hợp lệ
+                if (responseData.track && responseData.color) {
+                    setCurrentTrack({
+                        title: responseData.track,
+                        gradient: responseData.color
+                    });
+                    setIsPlaying(true);
+                } else {
+                    // Tắt nhạc và ẩn widget đi nếu gặp lỗi
+                    setIsPlaying(false);
+                    setCurrentTrack(null);
+                }
             };
 
             const togglePlay = () => {
